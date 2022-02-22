@@ -6,10 +6,11 @@ const { v4: uuidv4 } = require('uuid');
 const port = process.env.PORT || 7070;
 const Router = require('koa-router');
 const router = new Router();
-const contacts = [
-    {name: 'qwe',id:123},
-    {name:'123', id:23}
-];
+const WS = require('ws');
+const server = http.createServer(app.callback());
+const wsServer = new WS.Server({ server });
+
+const contacts = [];
 
 
 
@@ -58,12 +59,13 @@ app.use(async (ctx, next) => {
     });
     
     router.post('/contacts', async ctx => {
-        contacts.push({...ctx.request.body, id: uuidv4()});
+        contacts.push({...ctx.request.body});
         ctx.response.status = 204;
         
+        
     });
-    router.delete('/contacts', async ctx => {
-        const index = contacts.findIndex(({ id }) => id === ctx.params.id);
+    router.delete('/contacts/:name', async ctx => {
+        const index = contacts.findIndex(({ name }) => name === ctx.params.name);
         if (index !== -1) {
             contacts.splice(index, 1);
          };
@@ -77,5 +79,23 @@ app.use(async (ctx, next) => {
              app.use(router.routes());
              app.use(router.allowedMethods());
              
-const server = http.createServer(app.callback()).listen(port);
+     wsServer.on('connection', (ws, req) => {
+            const errCallback = (err) => {
+            if (err) {
+               console.log(err);
+            }
+            }
+            ws.on('message', msg => {
+                Array.from(wsServer.clients)
+                    .filter(o => o.readyState === WS.OPEN)
+                    .forEach(o => o.send(msg, errCallback));
+                });
+            ws.on('close', () => {
+                  console.log('close');
+            });    
+                       });
+                
+             
+
+server.listen(port);
 
